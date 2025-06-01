@@ -4,6 +4,7 @@ import logging
 import os
 import pickle
 import ssl
+import sys # Added for stderr
 import time
 from collections import deque
 from typing import BinaryIO, Callable, Deque, Dict, List, Optional, Union, cast
@@ -240,6 +241,10 @@ class HttpClient(QuicConnectionProtocol):
     async def _request(
         self, request: HttpRequest, file_path: Optional[str] = None
     ) -> Deque[H3Event]:
+        if len(self._request_waiter) > 100: # Threshold for warning
+            logger.warning(
+                f"HttpClient has {len(self._request_waiter)} concurrent requests pending. Further stream creations might be delayed due to server-imposed concurrent stream limits."
+            )
         stream_id = self._quic.get_next_available_stream_id()
 
         common_headers = [
@@ -427,6 +432,7 @@ async def main(
     local_port: int,
     zero_rtt: bool,
     upload_file: Optional[str] = None,
+    num_streams: int = 1,
 ) -> None:
     # parse URL
     parsed = urlparse(urls[0])
@@ -466,6 +472,7 @@ async def main(
         create_protocol=HttpClient,
         session_ticket_handler=save_session_ticket,
         local_port=local_port,
+        # local_host="0.0.0.0", # Removed as it caused TypeError with aioquic 1.2.0
         wait_connected=not zero_rtt,
     ) as client:
         client = cast(HttpClient, client)
@@ -484,19 +491,34 @@ async def main(
 
             await ws.close()
         else:
-            # perform request
-            coros = [
-                perform_http_request(
-                    client=client,
-                    url=url,
-                    data=data, # This data is already None if upload_file was specified (handled in __main__)
-                    include=include,
-                    output_dir=output_dir,
-                    upload_file_path=upload_file,
-                )
-                for url in urls
-            ]
-            await asyncio.gather(*coros)
+            # When using --num-streams, the client will attempt to create
+            # multiple streams for each specified URL.
+            # Note that the actual number of concurrent streams is limited by the server.
+            # The aioquic library will queue stream initiation attempts if the server's limit
+            # is reached, and these will be processed as the server increases
+            # its limits via MAX_STREAMS frames.
+
+            # The `data` and `upload_file` parameters for main() are derived from
+            # args.data and args.upload_file in the `if __name__ == "__main__":` block.
+            # If args.upload_file is set, data (data_to_pass) is None.
+            # This means `upload_file` takes precedence if provided.
+
+            all_coros = []
+            for url_str in urls:  # Iterate through each URL provided
+                for _ in range(num_streams): # For each URL, create num_streams requests
+                    all_coros.append(
+                        perform_http_request(
+                            client=client,
+                            url=url_str,
+                            data=data, # This is data_to_pass from __main__
+                            include=include,
+                            output_dir=output_dir,
+                            upload_file_path=upload_file, # This is args.upload_file from __main__
+                        )
+                    )
+
+            if all_coros:
+                await asyncio.gather(*all_coros)
 
             # process http pushes
             process_http_pushes(client=client, include=include, output_dir=output_dir)
@@ -618,6 +640,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--zero-rtt", action="store_true", help="try to send requests using 0-RTT"
     )
+    parser.add_argument(
+        "--num-streams",
+        type=int,
+        default=1,
+        help="the number of streams to create (default: 1)",
+    )
 
     args = parser.parse_args()
 
@@ -688,5 +716,6 @@ if __name__ == "__main__":
             local_port=args.local_port,
             zero_rtt=args.zero_rtt,
             upload_file=args.upload_file,
+            num_streams=args.num_streams,
         )
     )

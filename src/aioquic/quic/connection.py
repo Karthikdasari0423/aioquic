@@ -330,7 +330,9 @@ class QuicConnection:
             value=128,
         )
         self._local_max_streams_uni = Limit(
-            frame_type=QuicFrameType.MAX_STREAMS_UNI, name="max_streams_uni", value=128
+            frame_type=QuicFrameType.MAX_STREAMS_UNI,
+            name="max_streams_uni",
+            value=128,
         )
         self._local_next_stream_id_bidi = 0 if self._is_client else 1
         self._local_next_stream_id_uni = 2 if self._is_client else 3

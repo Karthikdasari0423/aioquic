@@ -700,6 +700,11 @@ if __name__ == "__main__":
         is_client=False,
         max_datagram_frame_size=65536,
         max_datagram_size=args.max_datagram_size,
+        # By default, aioquic advertises to the client that it can open
+        # up to 128 concurrent bidirectional streams and 128 concurrent
+        # unidirectional streams. These are the library defaults, as the
+        # specific configuration parameters for these (initial_max_streams_bidi
+        # and initial_max_streams_uni) have been removed from QuicConfiguration.
         quic_logger=quic_logger,
         secrets_log_file=secrets_log_file,
     )

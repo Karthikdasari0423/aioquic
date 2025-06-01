@@ -46,6 +46,20 @@ You can also open a WebSocket over HTTP/3:
 
   python examples/http3_client.py --ca-certs tests/pycacert.pem wss://localhost:4433/ws
 
+The client also supports creating multiple streams for a request (if the URL scheme is HTTPS).
+This can be controlled with the ``--num-streams`` argument:
+
+.. code-block:: console
+
+  python examples/http3_client.py --ca-certs tests/pycacert.pem https://localhost:4433/ --num-streams 10
+
+If ``--num-streams`` is set to a value significantly higher than the server's
+advertised concurrent stream limit (typically 128 by default for `aioquic`),
+the client may show a warning: *"HttpClient has ... concurrent requests pending.
+Further stream creations might be delayed due to peer stream limits."*
+This indicates that the client is queuing requests locally until the server
+increases its stream limit via ``MAX_STREAMS`` frames.
+
 File Uploads (using PUT)
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -1,0 +1,19 @@
+2025-06-01 18:11:58,418 DEBUG asyncio Using selector: EpollSelector
+Traceback (most recent call last):
+  File "/app/examples/http3_server.py", line 767, in <module>
+    asyncio.run(
+  File "/usr/lib/python3.10/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/app/examples/http3_server.py", line 615, in main
+    await serve(
+  File "/home/swebot/.local/lib/python3.10/site-packages/aioquic/asyncio/server.py", line 204, in serve
+    _, protocol = await loop.create_datagram_endpoint(
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1385, in create_datagram_endpoint
+    raise exceptions[0]
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1359, in create_datagram_endpoint
+    sock = socket.socket(
+  File "/usr/lib/python3.10/socket.py", line 232, in __init__
+    _socket.socket.__init__(self, family, type, proto, fileno)
+OSError: [Errno 97] Address family not supported by protocol

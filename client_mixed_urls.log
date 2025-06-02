@@ -1,0 +1,11 @@
+2025-06-01 18:14:11,988 DEBUG asyncio Using selector: EpollSelector
+Traceback (most recent call last):
+  File "/app/examples/http3_client.py", line 725, in <module>
+    asyncio.run(
+  File "/usr/lib/python3.10/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/app/examples/http3_client.py", line 459, in main
+    assert _host == host, "URL hostname doesn't match"
+AssertionError: URL hostname doesn't match

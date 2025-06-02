@@ -1,6 +1,6 @@
 import argparse
 import asyncio
-import importlib
+# importlib # No longer needed
 import logging
 import os
 import time
@@ -31,6 +31,53 @@ try:
     import uvloop
 except ImportError:
     uvloop = None
+
+
+# Example minimal ASGI app
+async def minimal_asgi_app(scope, receive, send):
+    if scope["type"] == "http":
+        # For PUT requests, attempt to receive the body to simulate server load
+        if scope["method"] == "PUT":
+            body = b""
+            more_body = True
+            while more_body:
+                message = await receive()
+                body += message.get("body", b"")
+                more_body = message.get("more_body", False)
+
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [[b"content-type", b"text/plain"]],
+            })
+            await send({
+                "type": "http.response.body",
+                "body": b"PUT received " + str(len(body)).encode() + b" bytes",
+                "more_body": False,
+            })
+        else: # GET requests
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [[b"content-type", b"text/plain"]],
+            })
+            await send({
+                "type": "http.response.body",
+                "body": b"Hello, world GET!",
+                "more_body": False,
+            })
+    elif scope["type"] == "lifespan":
+            while True:
+                message = await receive()
+                if message["type"] == "lifespan.startup":
+                    await send({"type": "lifespan.startup.complete"})
+                elif message["type"] == "lifespan.shutdown":
+                    await send({"type": "lifespan.shutdown.complete"})
+                    return
+    # In a real minimal app for this test, we might not need full websocket/webtransport,
+    # but the lifespan handler is good practice for ASGI.
+    # If other types are received by this minimal app, they will likely error,
+    # which is acceptable for this specific test's scope.
 
 
 def is_likely_text(data_bytes: bytes, max_len: int = 100) -> bool:
@@ -581,13 +628,13 @@ if __name__ == "__main__":
     defaults = QuicConfiguration(is_client=False)
 
     parser = argparse.ArgumentParser(description="QUIC server")
-    parser.add_argument(
-        "app",
-        type=str,
-        nargs="?",
-        default="demo:app",
-        help="the ASGI application as <module>:<attribute>",
-    )
+    # parser.add_argument(
+    #     "app",
+    #     type=str,
+    #     nargs="?",
+    #     default="demo:app", # This will be replaced by minimal_asgi_app
+    #     help="the ASGI application as <module>:<attribute>",
+    # ) # app argument is no longer needed
     parser.add_argument(
         "-c",
         "--certificate",
@@ -678,9 +725,10 @@ if __name__ == "__main__":
     )
 
     # import ASGI application
-    module_str, attr_str = args.app.split(":", maxsplit=1)
-    module = importlib.import_module(module_str)
-    application = getattr(module, attr_str)
+    # module_str, attr_str = args.app.split(":", maxsplit=1)
+    # module = importlib.import_module(module_str)
+    # application = getattr(module, attr_str)
+    application = minimal_asgi_app # Use the minimal app
 
     # create QUIC logger
     if args.quic_log:

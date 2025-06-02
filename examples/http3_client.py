@@ -518,7 +518,23 @@ async def main(
                     )
 
             if all_coros:
-                await asyncio.gather(*all_coros)
+                results = await asyncio.gather(*all_coros, return_exceptions=True)
+                for i, result in enumerate(results):
+                    if isinstance(result, Exception):
+                        # Determine which URL and request number this was for context
+                        # num_streams is available in main's scope
+                        # urls is available in main's scope
+                        url_idx = i // num_streams if num_streams > 0 else i # Avoid division by zero if num_streams somehow is 0
+                        req_num_for_url = (i % num_streams) + 1 if num_streams > 0 else 1
+
+                        failed_url = "unknown_url"
+                        if url_idx < len(urls):
+                            failed_url = urls[url_idx]
+
+                        logger.error(
+                            f"Request {req_num_for_url} for URL {failed_url} encountered an error: {result}",
+                            exc_info=result if isinstance(result, BaseException) else None # Log traceback if it's an actual exception object
+                        )
 
             # process http pushes
             process_http_pushes(client=client, include=include, output_dir=output_dir)

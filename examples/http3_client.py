@@ -534,15 +534,17 @@ async def main(
                 # For each URL, create num_streams requests
                 for _ in range(num_streams):
                     all_coros.append(
-                        asyncio.create_task(perform_http_request(
-                            client=client,
-                            url=url_str,
-                            data=data,  # This is data_to_pass from __main__
-                            include=include,
-                            output_dir=output_dir,
-                            # This is args.upload_file from __main__
-                            upload_file_path=upload_file,
-                        )) # Closing perform_http_request AND asyncio.create_task
+                        asyncio.create_task(
+                            perform_http_request(
+                                client=client,
+                                url=url_str,
+                                data=data,  # This is data_to_pass from __main__
+                                include=include,
+                                output_dir=output_dir,
+                                # This is args.upload_file from __main__
+                                upload_file_path=upload_file,
+                            )
+                        )  # Closing perform_http_request AND asyncio.create_task
                     )
 
             if all_coros:

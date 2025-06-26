@@ -534,7 +534,7 @@ async def main(
                 # For each URL, create num_streams requests
                 for _ in range(num_streams):
                     all_coros.append(
-                        perform_http_request(
+                        asyncio.create_task(perform_http_request(
                             client=client,
                             url=url_str,
                             data=data,  # This is data_to_pass from __main__
@@ -542,7 +542,7 @@ async def main(
                             output_dir=output_dir,
                             # This is args.upload_file from __main__
                             upload_file_path=upload_file,
-                        )
+                        )) # Closing perform_http_request AND asyncio.create_task
                     )
 
             if all_coros:
@@ -917,6 +917,7 @@ if __name__ == "__main__":
         alpn_protocols=H0_ALPN if args.legacy_http else H3_ALPN,
         congestion_control_algorithm=args.congestion_control_algorithm,
         max_datagram_size=args.max_datagram_size,
+        max_datagram_frame_size=65535,  # Enable H3 Datagram support by default
     )
     if args.ca_certs:
         configuration.load_verify_locations(args.ca_certs)
